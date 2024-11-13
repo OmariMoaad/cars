@@ -2,11 +2,9 @@ import * as React from "react"
 import { GalleryVerticalEnd } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { SidebarOptInForm } from "@/components/sidebar-opt-in-form"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -168,11 +166,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={data.navMain} />
       </SidebarContent>
-      <SidebarFooter>
-        <div className="p-1">
-          <SidebarOptInForm />
-        </div>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
