@@ -163,7 +163,13 @@ export function CarTable() {
             )}
           </SelectContent>
         </Select>
-        <Button onClick={() => setFilteredCars(CarService.getCars())}>
+        <Button
+          onClick={() => {
+            setFilteredCars(CarService.getCars());
+            setMake("");
+            setModel(""); 
+          }}
+        >
           All Cars
         </Button>
       </div>
