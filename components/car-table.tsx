@@ -18,8 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Car } from "./../app/models/car-entity";
-import { CarService } from "@/app/services/car-service";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerTitle,
+  DrawerFooter,
+  DrawerHeader,
+} from "@/components/ui/drawer";
 import {
   Select,
   SelectContent,
@@ -28,6 +34,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { Car } from "../app/models/car-entity";
+import { CarService } from "@/app/services/car-service";
+
 // CarTable Component
 export function CarTable() {
   const [make, setMake] = React.useState("");
@@ -35,22 +44,16 @@ export function CarTable() {
   const [filteredCars, setFilteredCars] = React.useState<Car[]>(
     CarService.getCars()
   );
-  const [selectedCar, setSelectedCar] = React.useState<Car | null>(null); // Store selected car for version display
-  const [selectedVersions, setSelectedVersions] = React.useState<
-    { name: string; price: number }[] | null
-  >(null);
+  const [selectedCar, setSelectedCar] = React.useState<Car | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
-  // Function to handle viewing versions
+  // Handle viewing versions
   const handleViewVersions = (car: Car) => {
-    setSelectedCar(car); // Set the selected car
-    if (car.versions) {
-      setSelectedVersions(car.versions);
-    } else {
-      setSelectedVersions(null);
-    }
+    setSelectedCar(car);
+    setIsDrawerOpen(true);
   };
 
-  // Update the list of cars based on the selected make and model
+  // Update cars based on selected make and model
   React.useEffect(() => {
     const allCars = CarService.getCars();
     const filtered = allCars.filter(
@@ -64,15 +67,22 @@ export function CarTable() {
   // Get all car models for the selected make
   const availableModels = CarService.getCarModels(make);
 
-  // Reset model and selectedVersions when make changes
+  // Handle make change and reset model
   const handleMakeChange = (newMake: string) => {
     setMake(newMake);
-    setModel(""); // Reset the model when make changes
-    setSelectedVersions(null); // Clear the selected versions when make changes
-    setSelectedCar(null); // Reset the selected car
+    setModel("");
   };
 
-  // Table columns definition
+  // Handle model change and automatically set the corresponding make
+  const handleModelChange = (newModel: string) => {
+    setModel(newModel);
+    const associatedMake = CarService.getMakeByModel(newModel);
+    if (associatedMake) {
+      setMake(associatedMake);
+    }
+  };
+
+  // Table column definitions
   const columns: ColumnDef<Car>[] = [
     {
       accessorKey: "make",
@@ -102,7 +112,7 @@ export function CarTable() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handleViewVersions(car)} // Correct scope for handleViewVersions
+            onClick={() => handleViewVersions(car)}
           >
             <Eye />
           </Button>
@@ -121,47 +131,44 @@ export function CarTable() {
   return (
     <div className="w-full">
       {/* Filters */}
-      <div className="py-4 flex">
-        <div className="pr-4">
-          <Select onValueChange={handleMakeChange}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder={make || "Make"} />
-            </SelectTrigger>
-            <SelectContent>
-              {CarService.getCarManufactures().map((make) => (
-                <SelectItem key={make} value={make}>
-                  {make}
+      <div className="py-4 flex gap-4">
+        <Select onValueChange={handleMakeChange} value={make}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder={make || "Make"} />
+          </SelectTrigger>
+          <SelectContent>
+            {CarService.getCarManufactures().map((make) => (
+              <SelectItem key={make} value={make}>
+                {make}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select onValueChange={handleModelChange} value={model}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder={model || "Model"} />
+          </SelectTrigger>
+          <SelectContent>
+            {availableModels.length > 0 ? (
+              availableModels.map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="pr-4">
-          <Select
-            onValueChange={setModel}
-            disabled={!make} // Disable model select if no make is selected
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder={model || "Model"} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableModels.length > 0 ? (
-                availableModels.map((model) => (
-                  <SelectItem key={model} value={model}>
-                    {model}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="" disabled>
-                  No models available
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
+              ))
+            ) : (
+              <SelectItem value="" disabled>
+                No models available
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+        <Button onClick={() => setFilteredCars(CarService.getCars())}>
+          All Cars
+        </Button>
       </div>
 
-      {/* Table */}
+      {/* Car Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -208,21 +215,47 @@ export function CarTable() {
         </Table>
       </div>
 
-      {/* Display selected versions */}
-      {selectedVersions && selectedCar && (
-        <div className="mt-4 p-4 border rounded-md">
-          <h2 className="text-lg font-semibold">
-            Car Versions for {selectedCar.make} {selectedCar.model}
-          </h2>
-          <ul>
-            {selectedVersions.map((version) => (
-              <li key={version.name} className="py-1">
-                {version.name}: ${version.price.toLocaleString()}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Drawer for Car Versions */}
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-sm">
+            <DrawerHeader>
+              <DrawerTitle>
+                {selectedCar ? (
+                  <h2>
+                    Car Versions - {selectedCar.make} {selectedCar.model}
+                  </h2>
+                ) : (
+                  "Select a car to view versions"
+                )}
+              </DrawerTitle>
+            </DrawerHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Version</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedCar?.versions?.map((version) => (
+                  <TableRow key={version.name}>
+                    <TableCell>{version.name}</TableCell>
+                    <TableCell className="text-right">
+                      ${version.price.toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <DrawerFooter>
+              <DrawerClose>
+                <Button variant="outline">Close</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

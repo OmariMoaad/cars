@@ -9,7 +9,10 @@ export class CarService {
   public static getCarManufactures(): Array<string> {
     return Array.from(new Set(CarsData.vehicles.map((car) => car.make)));
   }
-
+  public static getMakeByModel(model: string): string | null {
+    const car = this.getCars().find((car) => car.model === model);
+    return car ? car.make : null;
+  }
   public static getCarModels(make: string): Array<string> {
     if (!make) {
       return Array.from(new Set(CarsData.vehicles.map((car) => car.model)));
